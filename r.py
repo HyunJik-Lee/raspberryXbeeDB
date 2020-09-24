@@ -2,16 +2,17 @@ import RPi.GPIO
 import serial
 import time
 from xbee import XBee
-import mysql.connector
+import mariadb
 from datetime import datetime
-
+import json
+from calc import cal
 try:
     conn = mariadb.connect(
-            user="jiggy0429",
-            password="python21511785",
-            host="jiggy0429.mysql.pythonanywhere-services.com",
+            user="root",
+            password="21511785",
+            host="165.229.89.54",
             port=3306,
-            database="jiggy0429$default"
+            database="sensor"
             )
 except mariadb.Error as e:
     print(f"DB 연결 오류 : {e}")
@@ -28,6 +29,8 @@ GAS = 0.0
 TEMP = 0.0
 FLAME = 0.0
 x = 0
+if_arr = []
+if_json = ""
 
 def receive_data(data):
     gas_buf = ""
@@ -37,9 +40,13 @@ def receive_data(data):
     TEMP = 0.0
     FLAME = 0.0
     x = 0
+    if_arr = []
+    if_json = ""
     #print("data:{}".format(data['rf_data']))
     data_arr = list(data['rf_data'])
-    #print(data_arr)
+    print(data_arr)
+    if_arr = data_arr[22:]
+    if_json = json.dumps(if_arr)
     while x != len(data_arr):
       if data_arr[x] == 71:
         x+= 2
@@ -60,13 +67,16 @@ def receive_data(data):
           x+=1
         FLAME = float(flame_buf)
       x+=1
-
+    cur.execute('select sense_gas, sense_temp from sensitivity order by sense_id desc limit 1')
+    gas_sen, temp_sen = cur.fetchone()
+    percent, step = cal(GAS, TEMP, FLAME, gas_sen, temp_sen)
     date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cur.execute('insert into sensor(GAS, TEMP, FLAME, DATE) values (%s, %s, %s, %s)', (GAS, TEMP, FLAME, date))
+    cur.execute('insert into probability(percent, step, date) values (%s, %s, %s)', (percent, step, date))
+    cur.execute('insert into sensor(GAS, TEMP, FLAME, DATE, IFCAM) values (%s, %s, %s, %s, %s)', (GAS, TEMP, FLAME, date, if_json))
     print(GAS)
     print(TEMP)
     print(FLAME)
-    
+    print(if_json)
 
 ser = serial.Serial(SERIAL_PORT, baudrate=BAUD_RATE)
 xbee= XBee(ser, callback = receive_data, escaped=True)
