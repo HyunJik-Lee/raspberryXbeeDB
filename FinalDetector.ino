@@ -7,6 +7,7 @@ int Buzzer = 8;
 int FlameSensor = A0; //#define A0 14
 int MQ7Sensor = A1;   //#define A1 15
 int TempSensor = 9;
+int LED = 10;
 boolean isFire = false;
 AMG8833 sensor;
 XBee xbee = XBee();
@@ -26,6 +27,7 @@ void setup() {
   pinMode(Buzzer, OUTPUT);
   pinMode(FlameSensor, INPUT);
   pinMode(TempSensor, INPUT);
+  pinMode(LED, OUTPUT);
   Serial.begin(9600);
   sensor.init();
   xbee.setSerial(Serial);
@@ -41,7 +43,6 @@ void FireDetect(){
   float flameValue = Flame_sensor();
   IF_sensor();
   boolean isFire = false;
-  
   dtostrf(gasValue, 6, 2, gastmp);
   dtostrf(tempValue, 6, 2, temptmp);
   dtostrf(flameValue, 6, 2, flametmp);
@@ -95,6 +96,7 @@ float Temperature_sensor(){
 }
 
 void playWarning(){
+  digitalWrite(LED, HIGH);  
   for(int i = 200; i <= 800; i++){
     tone(Buzzer,i);
     delay(5);
@@ -105,6 +107,7 @@ void playWarning(){
     delay(10);
   }
   noTone(Buzzer);
+  digitalWrite(LED, LOW);
 }
 
 float getDistance(){
